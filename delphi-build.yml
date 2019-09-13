@@ -6,9 +6,13 @@ parameters:
   unitScopes: 'System;System.Win;Vcl;WinApi'
   fixPack: 'true'
   verbose: 'false'
+  preBuild: []
+  preBuildInline: []
   postBuild: []
+  postBuildInline: []
 
 steps:
+- ${{ parameters.preBuild }}
 - powershell: |
     $delphiVersion = '${{ parameters.delphiVersion }}'
     $project       = '${{ parameters.project }}'
@@ -88,6 +92,8 @@ steps:
 
     Set-Location (Split-Path -Path $project)
 
+    ${{ parameters.preBuildInline }}
+
     if (-Not(Test-Path -Path .bin))     { New-Item .bin .   -ItemType directory | Out-Null }
     if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
 
@@ -124,6 +130,8 @@ steps:
 
     if (Test-Path -Path $exe) {
         Write-Host $('Build succeeded! :)  [' + $exe + ']')
+
+        ${{ parameters.postBuildInline }}
     } else {
         Write-Host "##vso[task.logissue type=error]Build failed.  :("
         exit 1
