@@ -1,6 +1,7 @@
 parameters:
   delphiVersion: ''
   project: ''
+  appType: 'CONSOLE'    # CONSOLE (default) or GUI
   platform: ''
   searchPath: ''
   unitScopes: 'System;System.Win;Vcl;WinApi'
@@ -14,6 +15,7 @@ parameters:
 steps:
 - ${{ parameters.preBuild }}
 - powershell: |
+    $appType       - '${{ parameters.appType }}'
     $delphiVersion = '${{ parameters.delphiVersion }}'
     $project       = '${{ parameters.project }}'
     $searchPath    = '${{ parameters.searchPath }}'
@@ -92,12 +94,10 @@ steps:
 
     Set-Location (Split-Path -Path $project)
 
-    ${{ parameters.preBuildInline }}
-
     if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
     if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
 
-    $optD = '-DCONSOLE'
+    $optD = '-D' + $appType
     $optE = '-E.bin'
     $optI = '-I' + $searchPath
     $optN = '-N.bin'
@@ -119,11 +119,17 @@ steps:
     Add-Content $cfg $optU
     if ($delphi -gt $delphiXE) { Add-Content $cfg $optNS }
 
-    # Remove any previous build and invoke the command-line compiler
+    # Remove any previous build and invoke any preBuildInline script
         
     if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
 
-    $cmd = $dcc + ' ' + $dpr + ' -CC'
+    ${{ parameters.preBuildInline }}
+
+    # Invoke the compiler to build the project
+
+    $cmd = $dcc + ' ' + $dpr
+    if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC'}
+
     Write-Host $('Compiling with ' + $cmd)
     if ($verbose -eq 'true') { Invoke-Expression $cmd }
     else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Hint: ','Warning: ' }
