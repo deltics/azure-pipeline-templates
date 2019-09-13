@@ -94,7 +94,7 @@ steps:
 
     ${{ parameters.preBuildInline }}
 
-    if (-Not(Test-Path -Path .bin))     { New-Item .bin .   -ItemType directory | Out-Null }
+    if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
     if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
 
     $optD = '-DCONSOLE'
