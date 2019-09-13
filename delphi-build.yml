@@ -89,6 +89,7 @@ steps:
 
     Write-Host $('Delphi library path : ' + $delphiLib)
     Write-Host $('Using search path   : ' + $searchPath)
+    Write-Host $('To build            : ' + $exe)
         
     # Construct compiler options for the dccNN.cfg file then create that file
 
