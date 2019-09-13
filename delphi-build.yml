@@ -15,7 +15,7 @@ parameters:
 steps:
 - ${{ parameters.preBuild }}
 - powershell: |
-    $appType       - '${{ parameters.appType }}'
+    $appType       = '${{ parameters.appType }}'
     $delphiVersion = '${{ parameters.delphiVersion }}'
     $project       = '${{ parameters.project }}'
     $searchPath    = '${{ parameters.searchPath }}'
@@ -133,6 +133,12 @@ steps:
     Write-Host $('Compiling with ' + $cmd)
     if ($verbose -eq 'true') { Invoke-Expression $cmd }
     else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Hint: ','Warning: ' }
+
+    # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
+
+    if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+    
+    # Report success or failure, as appropriate
 
     if (Test-Path -Path $exe) {
         Write-Host $('Build succeeded! :)  [' + $exe + ']')
