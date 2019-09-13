@@ -125,6 +125,8 @@ steps:
 
     ${{ parameters.preBuildInline }}
 
+    type $cfg
+
     # Invoke the compiler to build the project
 
     $cmd = $dcc + ' ' + $dpr
