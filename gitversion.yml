@@ -10,9 +10,9 @@
 #
 #    Install on Windows using chocolatey: choco install GitVersion.Portable
 
-- steps:
-  - powershell: |
-      $GitVersion = GitVersion | ConvertFrom-Json
-      Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
-      Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
-    displayName: GitVersion
+steps:
+- powershell: |
+    $GitVersion = GitVersion | ConvertFrom-Json
+    Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
+    Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
+  displayName: GitVersion
