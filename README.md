@@ -8,11 +8,20 @@ To use these templates in your Azure DevOps build pipeline, refer to the followi
 * [Azure DevOps: Service Connections for GitHub](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/service-endpoints?view=azure-devops&tabs=yaml#sep-github)
 
 
+
 ## delphi-build.yml
 A Powershell script based template for building Delphi projects.  This template currently only supports **Win32** and **Win64** builds.  _It is untested with FMX projects_.
 
-####Pre-Requisites
-#####Delphi Compilers
+### Pre-Requisites
+
+As well as the configuration required in your GitHub account and Azure DevOps project in order to be able to references this template, the following are also required.
+
+#### A Self-Hosted Azure DevOps Build Agent
+Delphi compilers are not supported by the hosted build agents provided by Microsoft for Azure DevOps builds.  You will need to configure your own, self-hosted build machine with an agent installed.
+
+This is really straightforward to accomplish and a guide (of sorts) to this is [available on my blog](http://www.deltics.co.nz/blog/posts/2659).
+
+#### Delphi Compilers
 A build agent running this build job is assumed to have Delphi command-line compiler support with available Delphi versions in locations on the build agent hard-drive as follows:
 
   - `c:\dcc\<version>\bin` for compiler binaries (dcc32.exe and dcc64.exe etc)
@@ -20,32 +29,34 @@ A build agent running this build job is assumed to have Delphi command-line comp
 
 The `<version>` component of the path **must** correspond to the values passed to the **delphiVersion** parameter supported by the template.  See the **Usage** information for that parameter below for the requireded values.  For example, for **Delphi 7**:
 
-- c:\dcc\7\bin
-- c:\dcc\7\lib
+    c:\dcc\7\bin
+    c:\dcc\7\lib
 
 Later versions of Delphi may have multiple subfolders under the `lib` folder.  Whilst currently only **Windows** target platforms are supported it is recommended that you copy _all_ of these folders if you intend supporting other target platforms in the future (as and when supported by this template).  Unless you cannot afford the disk space - these do take up a fair chunk!
 
 For example, for **Delphi 10.3 Rio**:
 
-- c:\dcc\10.3\bin
-- c:\dcc\10.3\lib\android
-- c:\dcc\10.3\lib\iosDevice32
-- c:\dcc\10.3\lib\iosDevice64
-- c:\dcc\10.3\lib\iossimulator
-- c:\dcc\10.3\lib\linux64
-- c:\dcc\10.3\lib\osx32
-- c:\dcc\10.3\lib\win32
-- c:\dcc\10.3\lib\win32c
-- c:\dcc\10.3\lib\win64
+    c:\dcc\10.3\bin
+    c:\dcc\10.3\lib\android
+    c:\dcc\10.3\lib\iosDevice32
+    c:\dcc\10.3\lib\iosDevice64
+    c:\dcc\10.3\lib\iossimulator
+    c:\dcc\10.3\lib\linux64
+    c:\dcc\10.3\lib\osx32
+    c:\dcc\10.3\lib\win32
+    c:\dcc\10.3\lib\win32c
+    c:\dcc\10.3\lib\win64
 
-These folders may be 'donated' from a full Delphi installation of the corresponding Delphi version only if you have a fully licensed installation.  _Please abide by the terms of your Delphi license agreement_.
+These folders may be 'donated' from a full Delphi installation of the corresponding Delphi version.  _Please abide by the terms of your Delphi license agreement_.
 
-#####IDE FixPack Compilers
-Depending on the Delphi version involved, these are named either `dccNNspeed.exe` or `fastdccNN.exe`.  If installed, these should be placed in the corresponding `c:\dcc\<version>\bin` folder alongside the standard Delphi compiler.
+_**NOTE:** Neither `bin` nor any of the `lib` folders should be included on the build machine `PATH`._
 
-These compilers may be obtained from [Andreas Hausladen](https://www.idefixpack.de/blog/ide-tools/ide-fix-pack/).
+#### IDE FixPack Compilers
+Depending on the Delphi version involved these are named either `dccNNspeed.exe` or `fastdccNN.exe`.  If installed, these should be placed in the corresponding `c:\dcc\<version>\bin` folder alongside the standard Delphi compiler.
 
-###Template Parameters:
+An explanation of the benefits of these compilers as well as the compilers themselves may be found on [Andreas Hausladen's blog and downloads site](https://www.idefixpack.de/blog/ide-tools/ide-fix-pack/).
+
+### Template Parameters
 
   |Parameter|Usage|
   |:--------|:----|
@@ -62,7 +73,7 @@ These compilers may be obtained from [Andreas Hausladen](https://www.idefixpack.
   |**postBuild: []**|An **optional** parameter that defines an additional step (or steps) to be performed _after_ the Delphi build step itself.  _If any specified preBuild step(s) fail then the Delphi build step will not be performed_.|
   |**postBuildInline: []**|An **optional** parameter that defines additional Powershell script statements to be performed by the build step _immediately after_ executing the compiler, but only if the compilation was successful.  _Errors occuring during execution of these script statements may cause the Delphi build step to fail even if the Delphi compilation was successful._|
   
-###Job Behaviour
+### Job Behaviour
 1. Any `preBuild` steps are executed before the main build step itself.
 
 2. The main build step uses the specified Delphi version and platform to determine the compiler for use in the build and the required `lib` path to be added (as a minimum) to the search paths.  If required, IDE FixPack compilers are located and specified for use in preference over the standard compilers.
@@ -76,8 +87,8 @@ These compilers may be obtained from [Andreas Hausladen](https://www.idefixpack.
 6. Finally, any `postBuild` steps are executed.  If no [step conditions](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/conditions?view=azure-devops&tabs=yaml) are specified on those to determine otherwise, `postBuild` steps are only executed if the main build step and any `preBuild` steps were successful.
 
 
-###Roadmap
-**NOTE:** _There is no specific timeline in mind for any of these features.  Development of this template is driven primarily by my own needs, however contributions or suggestions from others are encouraged and gratefully received._
+### Roadmap
+_**NOTE:** There is no timeline in mind for any of these features.  Development of this template is driven primarily by my own needs, however contributions or suggestions from others are encouraged and gratefully received._
 
 1. Support for additional compiler configuration settings via parameters.
 2. Validation of support for FMX builds.
