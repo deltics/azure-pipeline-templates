@@ -133,11 +133,12 @@ steps:
     #
     # Yes, I need to figure out a proper way to handle this.
 
-    Rename-Item $cfg $($project + '.cfg')
+    $temp = $(Split-Path -Leaf $project) + '.cfg'
+    Rename-Item $cfg $temp
     
     ${{ parameters.preBuildInline }}
 
-    Rename-Item $($project + '.cfg') $cfg
+    Rename-Item $temp $cfg
 
     type $cfg
 
