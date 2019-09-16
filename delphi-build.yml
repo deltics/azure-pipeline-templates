@@ -124,7 +124,20 @@ steps:
         
     if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
 
+    # NOTE: What follows is a temporary fix to accommodate the current
+    #        state of duget.
+    #
+    # We rename the dcc<bits>.cfg to <project>.cfg.  If a duget restore
+    #  is performed in the preBuildInline script, it will update <project>.cfg
+    #  which we then rename back to dcc<bits>.cfg.
+    #
+    # Yes, I need to figure out a proper way to handle this.
+
+    Rename-Item $cfg $($project + '.cfg')
+    
     ${{ parameters.preBuildInline }}
+
+    Rename-Item $($project + '.cfg') $cfg
 
     type $cfg
 
