@@ -149,7 +149,7 @@ steps:
 
     Write-Host $('Compiling with ' + $cmd)
     if ($verbose -eq 'true') { Invoke-Expression $cmd }
-    else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Hint: ','Warning: ' }
+    else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
 
     # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
 
