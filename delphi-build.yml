@@ -134,9 +134,14 @@ steps:
     # Yes, I need to figure out a proper way to handle this.
 
     $temp = $(Split-Path -Leaf $project) + '.cfg'
+    
+    Write-Host $('Renaming ' + $cfg + ' as ' + $temp)
+    
     Rename-Item $cfg $temp
     
     ${{ parameters.preBuildInline }}
+
+    Write-Host $('Renaming ' + $temp + ' back to ' + $cfg)
 
     Rename-Item $temp $cfg
 
