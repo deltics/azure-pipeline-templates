@@ -1,6 +1,5 @@
 parameters:
   delphiVersion: ''
-  delphiVersions: []
   project: ''
   appType: 'CONSOLE'    # CONSOLE (default) or GUI
   platform: ''
@@ -176,19 +175,11 @@ steps:
     }
 
     $delphiVersion = '${{ parameters.delphiVersion }}'
-    
-    ${{ each version in parameters.delphiVersions }}
-      Write-Host '${{ version }}'
+    $delphiVersions = $delphiVersion.split(" ")
 
-    #$delphiVersions = @('7') ${{ parameters.delphiVersions }}
-
-    #if ($delphiVersions.length = 0) {
-    #    PerformBuild($delphiVersion)
-    #} else {
-    #    foreach ($delphiVersion in $delphiVersions) {
-    #        PerformBuild($delphiVersion)
-    #    }
-    #}
+    foreach ($delphiVersion in $delphiVersions) {
+        PerformBuild($delphiVersion)
+    }
     
   displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
