@@ -162,21 +162,21 @@ steps:
           # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
 
           if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+
+          # Report success or failure, as appropriate
+
+          if (Test-Path -Path $exe) {
+              Write-Host $('Build succeeded! :)  [' + $exe + ']')
+
+              ${{ parameters.postBuildInline }}
+          } else {
+              Write-Host "##vso[task.logissue type=error]Build failed.  :("
+              exit 1
+          }
       }
       finally {
           Set-Location $prevLocation
       }          
-
-      # Report success or failure, as appropriate
-
-      if (Test-Path -Path $exe) {
-          Write-Host $('Build succeeded! :)  [' + $exe + ']')
-
-          ${{ parameters.postBuildInline }}
-      } else {
-          Write-Host "##vso[task.logissue type=error]Build failed.  :("
-          exit 1
-      }
     }
 
     $delphiVersion = '${{ parameters.delphiVersion }}'
@@ -186,5 +186,5 @@ steps:
         PerformBuild($delphiVersion)
     }
     
-  displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
+  displayName: 'Delphi Build (${{ parameters.delphiVersion }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
