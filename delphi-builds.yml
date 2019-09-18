@@ -14,7 +14,7 @@ parameters:
 
 steps:
 - ${{ if containsValue( parameters.versions, '7' ) }}
-  template: delphi-build.yml
+  template: delphi-build.yml@templates
   parameters:
     delphiVersion: 7
     project: ${{ parameters.project }}
