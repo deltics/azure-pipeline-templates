@@ -11,9 +11,11 @@ parameters:
   preBuildInline: ''
   postBuild: []
   postBuildInline: ''
+  force: 'false'
 
 steps:
-- ${{ parameters.preBuild }}
+- ${{ if or( succeeded(), and( failed(), eq( parameters.force, 'true' ))) }}:
+    ${{ parameters.preBuild }}
 - powershell: |
     $project     = '${{ parameters.project }}'
     $appType     = '${{ parameters.appType }}'
@@ -154,4 +156,7 @@ steps:
 
     DelphiBuild($delphiVersion)
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
-- ${{ parameters.postBuild }}
+  ${{ if or( succeeded(), and( failed(), eq( parameters.force, 'true' ))) }}:
+    condition: succeededOrFailed()
+- ${{ if or( succeeded(), and( failed(), eq( parameters.force, 'true' ))) }}:
+    ${{ parameters.postBuild }}
