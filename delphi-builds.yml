@@ -1,0 +1,30 @@
+parameters:
+  versions: []
+  project: ''
+  appType: 'CONSOLE'
+  platform: ''
+  searchPath: ''
+  unitScopes: 'System;System.Win;Vcl;WinApi'
+  fixPack: 'true'
+  verbose: 'false'
+  preBuild: []
+  preBuildInline: []
+  postBuild: []
+  postBuildInline: []
+
+steps:
+- ${{ each version in parameters.versions }}
+  - template: delphi-build.yml
+    parameters:
+      delphiVersion: ${{ version }}
+      project: ${{ parameters.project }}
+      appType: ${{ parameters.appType }}
+      platform: ${{ parameters.platform }}
+      searchPath: ${{ parameters.searchPath }}
+      unitScopes: ${{ parameters.unitScopes }}
+      fixPack: ${{ parameters.fixPack }}
+      verbose: ${{ parameters.verbose }}
+      preBuild: ${{ parameters.preBuild }}
+      preBuildInline: ${{ parameters.preBuildInline }}
+      postBuildInline: ${{ parameters.postBuildInline }}
+      postBuild: ${{ parameters.postBuild }}

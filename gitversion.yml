@@ -1,0 +1,18 @@
+# Runs GitVersion to determine the SemVer for the build based on git commit history.
+#  This version is then stashed in pipeline variable 'gitversion' which may then be
+#  referenced in subsequent pipeline steps as $(gitversion).
+#
+# This version is also used to set the label for the Azure DevOps pipeline run.
+#
+# NOTE: 
+#    This template expects and requires that GitVersion is installed on the build
+#     machine  (https://github.com/GitTools/GitVersion)
+#
+#    Install on Windows using chocolatey: choco install GitVersion.Portable
+
+- steps:
+  - powershell: |
+      $GitVersion = GitVersion | ConvertFrom-Json
+      Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
+      Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
+    displayName: GitVersion
