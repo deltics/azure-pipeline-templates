@@ -8,9 +8,9 @@ parameters:
   fixPack: 'true'
   verbose: 'false'
   preBuild: []
-  preBuildInline: []
+  preBuildInline: ''
   postBuild: []
-  postBuildInline: []
+  postBuildInline: ''
 
 steps:
 - ${{ parameters.preBuild }}
