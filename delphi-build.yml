@@ -24,7 +24,12 @@ steps:
     $fixPack       = '${{ parameters.fixPack }}'
     $verbose       = '${{ parameters.verbose }}'
 
+    # Turn platform (x86/x64) into 'bits' (32/64) which will be useful in substitutions later
+
     $bits = if($platform -eq 'x64') {'64'} else {'32'}
+
+    # Turn human meaningful Delphi version into the internal product version, which will
+    #  make some version levelling comparisons a bit easier
 
     if     ($delphiVersion -eq '7')    { $delphi = 150 }
     elseif ($delphiVersion -eq '8')    { $delphi = 160 }
@@ -52,5 +57,34 @@ steps:
     # Some specific versions that are needed for comparisons later
     
     $delphiXE = 220
+
+    # Setup references to the dpr, exe, compiler cfg, libs etc
+
+    $dpr = $(Split-Path -Leaf $project) + '.dpr'
+    $exe = '.bin\' + $(Split-Path -Leaf $project) + '.exe'
+
+    $delphiRoot = 'c:\dcc\' + $delphiVersion
+    $delphiBin  = $delphiRoot + '\bin'
+    $delphiLib  = $delphiRoot + '\lib'
+
+    # Assume that we will use the standard Delphi compiler but then
+    #  check for the presence of an appropriate IDE FixPack compiler
+    #  (unless the fixPack parameter is anything other than 'true').
+    #
+    # If an IDE FixPack compiler is found, use that instead.
+
+    $dcc = $delphiBin + '\dcc' + $bits + '.exe'
+    $cfg = 'dcc' + $bits + '.cfg'
+
+    if($fixPack -eq 'true') {
+        Write-Host 'Checking for IDE FixPack compilers'
+
+        $dccSpeed = $delphiBin + '\dcc' + $bits + 'speed.exe'
+        $fastDcc  = $delphiBin + '\fastdcc' + $bits + '.exe'
+
+        if     (Test-Path -Path $dccSpeed) { $dcc = $dccSpeed }
+        elseif (Test-Path -Path $fastDcc)  { $dcc = $fastDcc }
+    }
+    Write-Host $('Compiling with      : ' + $dcc)
   displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
