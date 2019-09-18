@@ -18,7 +18,7 @@ steps:
     $project     = '${{ parameters.project }}'
     $appType     = '${{ parameters.appType }}'
     $platform    = '${{ parameters.platform }}'
-    $searchPath  = '${{ parameters.searchPath }}'
+    $uses  = '${{ parameters.searchPath }}'
     $unitScopes  = '${{ parameters.unitScopes }}'
     $fixPack     = '${{ parameters.fixPack }}'
     $verbose     = '${{ parameters.verbose }}'
@@ -76,19 +76,19 @@ steps:
         $dpr = $dprName + '.dpr'
         $exe = '.bin\' + $dprName + '.exe'
 
-        $dRoot = 'c:\dcc\' + $dVer
-        $dBin  = $dRoot + '\bin'
-        $dLib  = $dRoot + '\lib'
+        $dr = 'c:\dcc\' + $dVer
+        $db = $dr + '\bin'
+        $dl = $dr + '\lib'
 
         # If an IDE FixPack compiler is found, use that instead.
 
-        $dcc = $dBin + '\dcc' + $bits + '.exe'
+        $dcc = $db + '\dcc' + $bits + '.exe'
 
         if($fixPack -eq 'true') {
             Write-Host 'Checking for IDE FixPack compilers'
 
-            $dccSpeed = $dBin + '\dcc' + $bits + 'speed.exe'
-            $fastDcc  = $dBin + '\fastdcc' + $bits + '.exe'
+            $dccSpeed = $db + '\dcc' + $bits + 'speed.exe'
+            $fastDcc  = $db + '\fastdcc' + $bits + '.exe'
 
             if     (Test-Path -Path $dccSpeed) { $dcc = $dccSpeed }
             elseif (Test-Path -Path $fastDcc)  { $dcc = $fastDcc }
@@ -96,17 +96,12 @@ steps:
 
         # Setup lib and search path
 
-        if     ($d -eq $dXE) { $dLib = $dLib + '\win32\release' }
-        elseif ($d -gt $dXE) { $dLib = $dLib + '\win' + $bits + '\release' }
+        if     ($d -eq $dXE) { $dl = $dl + '\win32\release' }
+        elseif ($d -gt $dXE) { $dl = $dl + '\win' + $bits + '\release' }
 
-        $searchPath = $dLib + ';' + $searchPath
+        $uses = $dl + ';' + $uses
 
-        Write-Host $('Compiling with      : ' + $dcc)
-        Write-Host $('Delphi library path : ' + $dLib)
-        Write-Host $('Using search path   : ' + $searchPath)
-        Write-Host $('To build            : ' + $exe)
-            
-        $prevLocation = Get-Location
+        $cd = Get-Location
         Set-Location $dprPath
         try
         {
@@ -123,10 +118,10 @@ steps:
 
             Add-Content $cfg $('-D' + $appType)
             Add-Content $cfg '-E.bin'
-            Add-Content $cfg $('-I' + $searchPath)
+            Add-Content $cfg $('-I' + $uses)
             Add-Content $cfg '-N.bin'
-            Add-Content $cfg $('-R' + $searchPath)
-            Add-Content $cfg $('-U' + $searchPath)
+            Add-Content $cfg $('-R' + $uses)
+            Add-Content $cfg $('-U' + $uses)
             if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
 
             ${{ parameters.preBuildInline }}
@@ -151,7 +146,7 @@ steps:
         }
         finally
         {
-            Set-Location $prevLocation
+            Set-Location $cd
         }
     }
 
