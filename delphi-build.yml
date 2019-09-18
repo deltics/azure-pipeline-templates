@@ -89,6 +89,7 @@ steps:
 
     Write-Host $('Delphi library path : ' + $delphiLib)
     Write-Host $('Using search path   : ' + $searchPath)
+    Write-Host $('To build            : ' + $exe)
         
     # Construct compiler options for the dccNN.cfg file then create that file
 
@@ -123,7 +124,26 @@ steps:
         
     if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
 
+    # NOTE: What follows is a temporary fix to accommodate the current
+    #        state of duget.
+    #
+    # We rename the dcc<bits>.cfg to <project>.cfg.  If a duget restore
+    #  is performed in the preBuildInline script, it will update <project>.cfg
+    #  which we then rename back to dcc<bits>.cfg.
+    #
+    # Yes, I need to figure out a proper way to handle this.
+
+    $temp = $(Split-Path -Leaf $project) + '.cfg'
+    
+    Write-Host $('Renaming ' + $cfg + ' as ' + $temp)
+    
+    Rename-Item $cfg $temp
+    
     ${{ parameters.preBuildInline }}
+
+    Write-Host $('Renaming ' + $temp + ' back to ' + $cfg)
+
+    Rename-Item $temp $cfg
 
     type $cfg
 
@@ -134,7 +154,7 @@ steps:
 
     Write-Host $('Compiling with ' + $cmd)
     if ($verbose -eq 'true') { Invoke-Expression $cmd }
-    else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Hint: ','Warning: ' }
+    else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
 
     # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
 

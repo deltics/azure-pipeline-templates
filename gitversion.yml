@@ -9,10 +9,23 @@
 #     machine  (https://github.com/GitTools/GitVersion)
 #
 #    Install on Windows using chocolatey: choco install GitVersion.Portable
+#
+#    The Git command-line client is also required (not by GitVersion itself but due
+#     the need to run Git commands to sync tags).
 
-- steps:
-  - powershell: |
-      $GitVersion = GitVersion | ConvertFrom-Json
-      Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
-      Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
-    displayName: GitVersion
+steps:
+- powershell: |
+    # First make sure that local tags reflect remote tags (otherwise any which were
+    #  deleted in the remote will still be in the local repo).  The two commands that
+    #  follow first delete ALL local tags then fetch tags from the remote)
+    
+    git tag -l | %{git tag -d $_}
+    git fetch --tags
+    
+    # Now we can run GitVersion, confident that any tag-based versioning will reflect
+    #  the tags in the repo.
+    
+    $GitVersion = GitVersion | ConvertFrom-Json
+    Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
+    Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
+  displayName: GitVersion
