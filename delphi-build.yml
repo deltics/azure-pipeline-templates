@@ -11,11 +11,9 @@ parameters:
   preBuildInline: ''
   postBuild: []
   postBuildInline: ''
-  force: 'false'
 
 steps:
-- ${{ if or( succeeded(), and( failed(), eq( parameters.force, 'true' ))) }}:
-    ${{ parameters.preBuild }}
+- ${{ parameters.preBuild }}
 - powershell: |
     $project     = '${{ parameters.project }}'
     $appType     = '${{ parameters.appType }}'
@@ -127,19 +125,20 @@ steps:
             if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
 
             ${{ parameters.preBuildInline }}
+            Write-Host $('Config (' + $cfg + '):'
             type $cfg
 
             # Invoke the compiler
             $cmd = $dcc + ' ' + $dpr
             if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
 
+            Write-Host $(':>' + $cmd)
             if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
             else { Invoke-Expression $cmd }
-            Write-Host $('Compiling with ' + $cmd)
             
             # Report outcome
             if (Test-Path -Path $exe) {
-                Write-Host $('Build succeeded! :)  [' + $exe + ']')
+                Write-Host 'OK!'
                 ${{ parameters.postBuildInline }}
             } else {
                 Write-Host '##vso[task.logissue type=error]Build failed. :('
@@ -156,7 +155,4 @@ steps:
 
     DelphiBuild($delphiVersion)
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
-  ${{ if or( succeeded(), and( failed(), eq( parameters.force, 'true' ))) }}:
-    condition: succeededOrFailed()
-- ${{ if or( succeeded(), and( failed(), eq( parameters.force, 'true' ))) }}:
-    ${{ parameters.postBuild }}
+- ${{ parameters.postBuild }}
