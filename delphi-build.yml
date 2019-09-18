@@ -23,5 +23,34 @@ steps:
     $unitScopes    = '${{ parameters.unitScopes }}'
     $fixPack       = '${{ parameters.fixPack }}'
     $verbose       = '${{ parameters.verbose }}'
+
+    $bits = if($platform -eq 'x64') {'64'} else {'32'}
+
+    if     ($delphiVersion -eq '7')    { $delphi = 150 }
+    elseif ($delphiVersion -eq '8')    { $delphi = 160 }
+    elseif ($delphiVersion -eq '2005') { $delphi = 170 }
+    elseif ($delphiVersion -eq '2006') { $delphi = 180 }
+    elseif ($delphiVersion -eq '2007') { $delphi = 185 }
+    elseif ($delphiVersion -eq '2009') { $delphi = 200 }
+    elseif ($delphiVersion -eq '2010') { $delphi = 210 }
+    elseif ($delphiVersion -eq 'xe')   { $delphi = 220 }
+    elseif ($delphiVersion -eq 'xe2')  { $delphi = 230 }
+    elseif ($delphiVersion -eq 'xe3')  { $delphi = 240 }
+    elseif ($delphiVersion -eq 'xe4')  { $delphi = 250 }
+    elseif ($delphiVersion -eq 'xe5')  { $delphi = 260 }
+    elseif ($delphiVersion -eq 'xe6')  { $delphi = 270 }
+    elseif ($delphiVersion -eq 'xe7')  { $delphi = 280 }
+    elseif ($delphiVersion -eq 'xe8')  { $delphi = 290 }
+    elseif ($delphiVersion -eq '10')   { $delphi = 300 }
+    elseif ($delphiVersion -eq '10.1') { $delphi = 310 }
+    elseif ($delphiVersion -eq '10.2') { $delphi = 320 }
+    elseif ($delphiVersion -eq '10.3') { $delphi = 330 }
+    else {
+        Write-Host "##vso[task.logissue type=error]Unknown Delphi version '$(delphiVersion)' is not supported by this template"
+    }
+
+    # Some specific versions that are needed for comparisons later
+    
+    $delphiXE = 220
   displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
