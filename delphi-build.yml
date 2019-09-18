@@ -173,8 +173,7 @@ steps:
               Write-Host "##vso[task.logissue type=error]Build failed.  :("
               exit 1
           }
-      }
-      finally {
+      } finally {
           Set-Location $prevLocation
       }          
     }
@@ -185,6 +184,5 @@ steps:
     foreach ($delphiVersion in $delphiVersions) {
         PerformBuild($delphiVersion)
     }
-    
   displayName: 'Delphi Build (${{ parameters.delphiVersion }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
