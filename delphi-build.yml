@@ -18,7 +18,7 @@ steps:
     $project     = '${{ parameters.project }}'
     $appType     = '${{ parameters.appType }}'
     $platform    = '${{ parameters.platform }}'
-    $uses  = '${{ parameters.searchPath }}'
+    $uses        = '${{ parameters.searchPath }}'
     $unitScopes  = '${{ parameters.unitScopes }}'
     $fixPack     = '${{ parameters.fixPack }}'
     $verbose     = '${{ parameters.verbose }}'
@@ -131,10 +131,10 @@ steps:
             $cmd = $dcc + ' ' + $dpr
             if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
 
-            if ($verbose -ne 'true') { $cmd = $cmd + " | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: '" }
+            if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
+            else { Invoke-Expression $cmd }
             Write-Host $('Compiling with ' + $cmd)
-            Invoke-Expression $cmd
-
+            
             # Report outcome
             if (Test-Path -Path $exe) {
                 Write-Host $('Build succeeded! :)  [' + $exe + ']')
