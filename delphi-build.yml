@@ -15,28 +15,142 @@ parameters:
 steps:
 - ${{ parameters.preBuild }}
 - powershell: |
-    . scripts\DelphiBuild.ps1
+    $project     = '${{ parameters.project }}'
+    $appType     = '${{ parameters.appType }}'
+    $platform    = '${{ parameters.platform }}'
+    $searchPath  = '${{ parameters.searchPath }}'
+    $unitScopes  = '${{ parameters.unitScopes }}'
+    $fixPack     = '${{ parameters.fixPack }}'
+    $verbose     = '${{ parameters.verbose }}'
+    $preDcc      = '${{ parameters.preBuildInline }}'
+    $postDcc     = '${{ parameters.postBuildInline }}'
+
+    function DelphiBuild
+    {
+        param([string]$dVer)
+
+        # Human meaningful into useful
+
+        $bits = if($platform -eq 'x64') {'64'} else {'32'}
+
+        if     ($dVer -eq '7')    { $d = 150 }
+        elseif ($dVer -eq '8')    { $d = 160 }
+        elseif ($dVer -eq '2005') { $d = 170 }
+        elseif ($dVer -eq '2006') { $d = 180 }
+        elseif ($dVer -eq '2007') { $d = 185 }
+        elseif ($dVer -eq '2009') { $d = 200 }
+        elseif ($dVer -eq '2010') { $d = 210 }
+        elseif ($dVer -eq 'xe')   { $d = 220 }
+        elseif ($dVer -eq 'xe2')  { $d = 230 }
+        elseif ($dVer -eq 'xe3')  { $d = 240 }
+        elseif ($dVer -eq 'xe4')  { $d = 250 }
+        elseif ($dVer -eq 'xe5')  { $d = 260 }
+        elseif ($dVer -eq 'xe6')  { $d = 270 }
+        elseif ($dVer -eq 'xe7')  { $d = 280 }
+        elseif ($dVer -eq 'xe8')  { $d = 290 }
+        elseif ($dVer -eq '10')   { $d = 300 }
+        elseif ($dVer -eq '10.1') { $d = 310 }
+        elseif ($dVer -eq '10.2') { $d = 320 }
+        elseif ($dVer -eq '10.3') { $d = 330 }
+        else {
+            Write-Host "##vso[task.logissue type=error]Delphi version '$(delphiVer)' is not supported"
+        }
+        $dXE = 220
+
+        # Useful references
+
+        $dprName = $(Split-Path -Leaf $project)
+        $dprPath = $(Split-Path -Path $project)
+        $dpr = $dprName + '.dpr'
+        $exe = '.bin\' + $dprName + '.exe'
+
+        $dRoot = 'c:\dcc\' + $dVer
+        $dBin  = $dRoot + '\bin'
+        $dLib  = $dRoot + '\lib'
+
+        # If an IDE FixPack compiler is found, use that instead.
+
+        $dcc = $dBin + '\dcc' + $bits + '.exe'
+        $cfg = 'dcc' + $bits + '.cfg'
+
+        if($fixPack -eq 'true') {
+            Write-Host 'Checking for IDE FixPack compilers'
+
+            $dccSpeed = $dBin + '\dcc' + $bits + 'speed.exe'
+            $fastDcc  = $dBin + '\fastdcc' + $bits + '.exe'
+
+            if     (Test-Path -Path $dccSpeed) { $dcc = $dccSpeed }
+            elseif (Test-Path -Path $fastDcc)  { $dcc = $fastDcc }
+        }
+
+        # Setup lib and search path
+
+        if     ($d -eq $dXE) { $dLib = $dLib + '\win32\release' }
+        elseif ($d -gt $dXE) { $dLib = $dLib + '\win' + $bits + '\release' }
+
+        $searchPath = $dLib + ';' + $searchPath
+
+        Write-Host $('Compiling with      : ' + $dcc)
+        Write-Host $('Delphi library path : ' + $dLib)
+        Write-Host $('Using search path   : ' + $searchPath)
+        Write-Host $('To build            : ' + $exe)
+            
+        $prevLocation = Get-Location
+        Set-Location $dprPath
+        try
+        {
+            if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
+            if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
+               
+            if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+            New-Item $cfg -ItemType file | Out-Null
+
+            Add-Content $cfg $('-D' + $appType)
+            Add-Content $cfg '-E.bin'
+            Add-Content $cfg $('-I' + $searchPath)
+            Add-Content $cfg '-N.bin'
+            Add-Content $cfg $('-R' + $searchPath)
+            Add-Content $cfg $('-U' + $searchPath)
+            if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
+
+            # Remove any previous build and invoke any preBuildInline script
+
+            if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
+
+            $temp = $dprNamr + '.cfg' #temp
+            Rename-Item $cfg $temp                       
+            ${{ parameters.preBuildInline }}
+            Rename-Item $temp $cfg
+            type $cfg
+
+            # Invoke the compiler
+            $cmd = $dcc + ' ' + $dpr
+            if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
+
+            if ($verbose -ne 'true') { $cmd = $cmd + " | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: '" }
+            Write-Host $('Compiling with ' + $cmd)
+            Invoke-Expression $cmd
+
+            # Remove the cfg file
+            if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+            
+            # Report outcome
+            if (Test-Path -Path $exe) {
+                Write-Host $('Build succeeded! :)  [' + $exe + ']')
+                ${{ parameters.postBuildInline }}
+            } else {
+                Write-Host '##vso[task.logissue type=error]Build failed. :('
+                exit 1
+            }
+        }
+        finally
+        {
+            Set-Location $prevLocation
+        }
+    }
 
     $delphiVersion = '${{ parameters.delphiVersion }}'
-    $project       = '${{ parameters.project }}'
-    $appType       = '${{ parameters.appType }}'
-    $platform      = '${{ parameters.platform }}'
-    $searchPath    = '${{ parameters.searchPath }}'
-    $unitScopes    = '${{ parameters.unitScopes }}'
-    $fixPack       = '${{ parameters.fixPack }}'
-    $verbose       = '${{ parameters.verbose }}'
-    $preDcc        = '${{ parameters.preBuildInline }}'
-    $postDcc       = '${{ parameters.postBuildInline }}'
 
-    DelphiBuild($delphiVersion,
-                $project,
-                $appType,
-                $platform,
-                $searchPath,
-                $unitScopes,
-                $fixPack,
-                $verbose,
-                $preDcc,
-                $postDcc)
+    DelphiBuild($delphiVersion)
   displayName: 'Delphi Build (${{ parameters.delphiVersion }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
