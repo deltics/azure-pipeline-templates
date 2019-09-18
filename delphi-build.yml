@@ -155,5 +155,28 @@ steps:
 
     type $cfg
 
+    # Invoke the compiler to build the project
+
+    $cmd = $dcc + ' ' + $dpr
+    if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
+
+    Write-Host $('Compiling with ' + $cmd)
+    if ($verbose -eq 'true') { Invoke-Expression $cmd }
+    else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
+
+    # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
+
+    if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+    
+    # Report success or failure, as appropriate
+
+    if (Test-Path -Path $exe) {
+        Write-Host $('Build succeeded! :)  [' + $exe + ']')
+
+        ${{ parameters.postBuildInline }}
+    } else {
+        Write-Host "##vso[task.logissue type=error]Build failed.  :("
+        exit 1
+    }
   displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
