@@ -38,6 +38,5 @@ steps:
                 $verbose,
                 $preDcc,
                 $postDcc)
-
-displayName: 'Delphi Build (${{ parameters.delphiVersion }}) of ${{ parameters.project }}'
+  displayName: 'Delphi Build (${{ parameters.delphiVersion }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
