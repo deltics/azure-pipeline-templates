@@ -177,7 +177,7 @@ steps:
 
     $delphiVersion = '${{ parameters.delphiVersion }}'
     
-    {{ each version in parameters.delphiVersions }}
+    ${{ each version in parameters.delphiVersions }}
       Write-Host '${{ version }}'
 
     #$delphiVersions = @('7') ${{ parameters.delphiVersions }}
