@@ -22,8 +22,18 @@ steps:
     $unitScopes  = '${{ parameters.unitScopes }}'
     $fixPack     = '${{ parameters.fixPack }}'
     $verbose     = '${{ parameters.verbose }}'
-    $preDcc      = '${{ parameters.preBuildInline }}'
-    $postDcc     = '${{ parameters.postBuildInline }}'
+
+    function CreateDir
+    {
+      param([string]$path)
+      if (-Not(Test-Path -Path $path)) { New-Item $path -ItemType directory | Out-Null }
+    }
+
+    function Delete
+    {
+      param([string]$item)
+      if (Test-Path -Path $item) { Remove-Item $item | Out-Null }
+    }
 
     function DelphiBuild
     {
@@ -71,7 +81,6 @@ steps:
         # If an IDE FixPack compiler is found, use that instead.
 
         $dcc = $dBin + '\dcc' + $bits + '.exe'
-        $cfg = 'dcc' + $bits + '.cfg'
 
         if($fixPack -eq 'true') {
             Write-Host 'Checking for IDE FixPack compilers'
@@ -99,10 +108,15 @@ steps:
         Set-Location $dprPath
         try
         {
-            if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
-            if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
+            CreateDir('.bin')
+            CreateDir('.results')
                
-            if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+            # Remove any previous build and config
+
+            Delete($exe)
+            Delete($cfg)
+            Delete($('dcc' + $bits + '.cfg'))
+
             New-Item $cfg -ItemType file | Out-Null
 
             Add-Content $cfg $('-D' + $appType)
@@ -113,14 +127,7 @@ steps:
             Add-Content $cfg $('-U' + $searchPath)
             if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
 
-            # Remove any previous build and invoke any preBuildInline script
-
-            if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
-
-            $temp = $dprNamr + '.cfg' #temp
-            Rename-Item $cfg $temp                       
             ${{ parameters.preBuildInline }}
-            Rename-Item $temp $cfg
             type $cfg
 
             # Invoke the compiler
@@ -131,9 +138,6 @@ steps:
             Write-Host $('Compiling with ' + $cmd)
             Invoke-Expression $cmd
 
-            # Remove the cfg file
-            if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
-            
             # Report outcome
             if (Test-Path -Path $exe) {
                 Write-Host $('Build succeeded! :)  [' + $exe + ']')
