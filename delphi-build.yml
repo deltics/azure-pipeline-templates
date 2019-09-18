@@ -2,7 +2,7 @@ parameters:
   delphiVersion: ''
   project: ''
   appType: 'CONSOLE'    # CONSOLE (default) or GUI
-  platform: ''
+  platform: 'x86'
   searchPath: ''
   unitScopes: 'System;System.Win;Vcl;WinApi'
   fixPack: 'true'
@@ -153,5 +153,5 @@ steps:
     $delphiVersion = '${{ parameters.delphiVersion }}'
 
     DelphiBuild($delphiVersion)
-  displayName: 'Delphi Build (${{ parameters.delphiVersion }}) of ${{ parameters.project }}'
+  displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
