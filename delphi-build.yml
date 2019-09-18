@@ -86,5 +86,47 @@ steps:
         elseif (Test-Path -Path $fastDcc)  { $dcc = $fastDcc }
     }
     Write-Host $('Compiling with      : ' + $dcc)
+
+    # Modify the Delphi Lib path according to the specified Delphi version
+    #  and insert into the searchPath
+
+    if     ($delphi -eq $delphiXE) { $delphiLib = $delphiLib + '\win32\release' }
+    elseif ($delphi -gt $delphiXE) { $delphiLib = $delphiLib + '\win' + $bits + '\release' }
+
+    $searchPath = $delphiLib + ';' + $searchPath
+
+    Write-Host $('Delphi library path : ' + $delphiLib)
+    Write-Host $('Using search path   : ' + $searchPath)
+    Write-Host $('To build            : ' + $exe)
+        
+    # Construct compiler options for the dccNN.cfg file then create that file
+
+    Set-Location (Split-Path -Path $project)
+
+    if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
+    if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
+
+    $optD = '-D' + $appType
+    $optE = '-E.bin'
+    $optI = '-I' + $searchPath
+    $optN = '-N.bin'
+    $optR = '-R' + $searchPath
+    $optU = '-U' + $searchPath
+
+    if($delphi -gt $delphiXE) { $optNS='-NS' + $unitScopes }
+        
+    Write-Host $('Creating compiler configuration : ' + $cfg)
+
+    if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+    New-Item $cfg -ItemType file | Out-Null
+
+    Add-Content $cfg $optD
+    Add-Content $cfg $optE
+    Add-Content $cfg $optI
+    Add-Content $cfg $optN
+    Add-Content $cfg $optR
+    Add-Content $cfg $optU
+    if ($delphi -gt $delphiXE) { Add-Content $cfg $optNS }
+    
   displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
