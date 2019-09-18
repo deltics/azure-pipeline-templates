@@ -125,14 +125,14 @@ steps:
             if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
 
             ${{ parameters.preBuildInline }}
-            Write-Host $('Config (' + $cfg + '):'
+            Write-Host $('Config [' + $cfg + ']:')
             type $cfg
 
             # Invoke the compiler
             $cmd = $dcc + ' ' + $dpr
             if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
 
-            Write-Host $(':>' + $cmd)
+            Write-Host $(':>[' + $cmd + ']')
             if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
             else { Invoke-Expression $cmd }
             
