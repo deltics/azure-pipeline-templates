@@ -176,15 +176,18 @@ steps:
     }
 
     $delphiVersion = '${{ parameters.delphiVersion }}'
-    $delphiVersions = ${{ parameters.delphiVersions }}
+    
+    Write-Host '${{ parameters.delphiVersions }}'
+    
+    #$delphiVersions = @('7') ${{ parameters.delphiVersions }}
 
-    if ($delphiVersions.length = 0) {
-        PerformBuild($delphiVersion)
-    } else {
-        foreach ($delphiVersion in $delphiVersions) {
-            PerformBuild($delphiVersion)
-        }
-    }
+    #if ($delphiVersions.length = 0) {
+    #    PerformBuild($delphiVersion)
+    #} else {
+    #    foreach ($delphiVersion in $delphiVersions) {
+    #        PerformBuild($delphiVersion)
+    #    }
+    #}
     
   displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
