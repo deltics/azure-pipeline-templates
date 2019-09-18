@@ -71,6 +71,8 @@ steps:
 
         $dprName = $(Split-Path -Leaf $project)
         $dprPath = $(Split-Path -Path $project)
+
+        $cfg = $dprName + '.cfg'
         $dpr = $dprName + '.dpr'
         $exe = '.bin\' + $dprName + '.exe'
 
