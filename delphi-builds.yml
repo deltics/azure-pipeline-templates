@@ -13,8 +13,8 @@ parameters:
   postBuildInline: []
 
 steps:
-${{ each version in parameters.versions }}
-- template: delphi-build.yml
+- ${{ each version in parameters.versions }}
+  template: delphi-build.yml
   parameters:
     delphiVersion: ${{ version }}
     project: ${{ parameters.project }}
