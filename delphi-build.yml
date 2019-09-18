@@ -95,73 +95,78 @@ steps:
           
       # Construct compiler options for the dccNN.cfg file then create that file
 
+      $prevLocation = Get-Location
       Set-Location (Split-Path -Path $project)
+      try {
+          if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
+          if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
 
-      if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
-      if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
+          $optD = '-D' + $appType
+          $optE = '-E.bin'
+          $optI = '-I' + $searchPath
+          $optN = '-N.bin'
+          $optR = '-R' + $searchPath
+          $optU = '-U' + $searchPath
 
-      $optD = '-D' + $appType
-      $optE = '-E.bin'
-      $optI = '-I' + $searchPath
-      $optN = '-N.bin'
-      $optR = '-R' + $searchPath
-      $optU = '-U' + $searchPath
+          if($delphi -gt $delphiXE) { $optNS='-NS' + $unitScopes }
+              
+          Write-Host $('Creating compiler configuration : ' + $cfg)
 
-      if($delphi -gt $delphiXE) { $optNS='-NS' + $unitScopes }
+          if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+          New-Item $cfg -ItemType file | Out-Null
+
+          Add-Content $cfg $optD
+          Add-Content $cfg $optE
+          Add-Content $cfg $optI
+          Add-Content $cfg $optN
+          Add-Content $cfg $optR
+          Add-Content $cfg $optU
+          if ($delphi -gt $delphiXE) { Add-Content $cfg $optNS }
+
+          # Remove any previous build and invoke any preBuildInline script
+              
+          if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
+
+          # NOTE: What follows is a temporary fix to accommodate the current
+          #        state of duget.
+          #
+          # We rename the dcc<bits>.cfg to <project>.cfg.  If a duget restore
+          #  is performed in the preBuildInline script, it will update <project>.cfg
+          #  which we then rename back to dcc<bits>.cfg.
+          #
+          # Yes, I need to figure out a proper way to handle this.
+
+          $temp = $(Split-Path -Leaf $project) + '.cfg'
           
-      Write-Host $('Creating compiler configuration : ' + $cfg)
-
-      if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
-      New-Item $cfg -ItemType file | Out-Null
-
-      Add-Content $cfg $optD
-      Add-Content $cfg $optE
-      Add-Content $cfg $optI
-      Add-Content $cfg $optN
-      Add-Content $cfg $optR
-      Add-Content $cfg $optU
-      if ($delphi -gt $delphiXE) { Add-Content $cfg $optNS }
-
-      # Remove any previous build and invoke any preBuildInline script
+          Write-Host $('Renaming ' + $cfg + ' as ' + $temp)
           
-      if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
+          Rename-Item $cfg $temp
+          
+          ${{ parameters.preBuildInline }}
 
-      # NOTE: What follows is a temporary fix to accommodate the current
-      #        state of duget.
-      #
-      # We rename the dcc<bits>.cfg to <project>.cfg.  If a duget restore
-      #  is performed in the preBuildInline script, it will update <project>.cfg
-      #  which we then rename back to dcc<bits>.cfg.
-      #
-      # Yes, I need to figure out a proper way to handle this.
+          Write-Host $('Renaming ' + $temp + ' back to ' + $cfg)
 
-      $temp = $(Split-Path -Leaf $project) + '.cfg'
-      
-      Write-Host $('Renaming ' + $cfg + ' as ' + $temp)
-      
-      Rename-Item $cfg $temp
-      
-      ${{ parameters.preBuildInline }}
+          Rename-Item $temp $cfg
 
-      Write-Host $('Renaming ' + $temp + ' back to ' + $cfg)
+          type $cfg
 
-      Rename-Item $temp $cfg
+          # Invoke the compiler to build the project
 
-      type $cfg
+          $cmd = $dcc + ' ' + $dpr
+          if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC'}
 
-      # Invoke the compiler to build the project
+          Write-Host $('Compiling with ' + $cmd)
+          if ($verbose -eq 'true') { Invoke-Expression $cmd }
+          else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
 
-      $cmd = $dcc + ' ' + $dpr
-      if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC'}
+          # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
 
-      Write-Host $('Compiling with ' + $cmd)
-      if ($verbose -eq 'true') { Invoke-Expression $cmd }
-      else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
+          if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
+      }
+      finally {
+          Set-Location $prevLocation
+      }          
 
-      # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
-
-      if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
-      
       # Report success or failure, as appropriate
 
       if (Test-Path -Path $exe) {
