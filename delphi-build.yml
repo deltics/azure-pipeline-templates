@@ -15,9 +15,10 @@ parameters:
 steps:
 - ${{ parameters.preBuild }}
 - powershell: |
-    $appType       = '${{ parameters.appType }}'
     $delphiVersion = '${{ parameters.delphiVersion }}'
     $project       = '${{ parameters.project }}'
+    $appType       = '${{ parameters.appType }}'
+    $platform      = '${{ parameters.platform }}'
     $searchPath    = '${{ parameters.searchPath }}'
     $unitScopes    = '${{ parameters.unitScopes }}'
     $fixPack       = '${{ parameters.fixPack }}'
