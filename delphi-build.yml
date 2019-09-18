@@ -176,7 +176,7 @@ steps:
     }
 
     $delphiVersion = '${{ parameters.delphiVersion }}'
-    $delphiVersions = @(${{ parameters.delphiVersions }})
+    $delphiVersions = ${{ parameters.delphiVersions }}
 
     if ($delphiVersions.length = 0) {
         PerformBuild($delphiVersion)
