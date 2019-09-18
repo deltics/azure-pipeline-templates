@@ -63,7 +63,7 @@ steps:
         elseif ($dVer -eq '10.2') { $d = 320 }
         elseif ($dVer -eq '10.3') { $d = 330 }
         else {
-            Write-Host "##vso[task.logissue type=error]Delphi version '$(delphiVer)' is not supported"
+            Write-Host "##vso[task.logissue type=error]Delphi version '$(dVer)' is not supported"
         }
         $dXE = 220
 
