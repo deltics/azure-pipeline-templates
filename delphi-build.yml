@@ -68,8 +68,8 @@ steps:
     # Useful references
 
     $cd  = Get-Location
-    $bin     = $cd + '\.bin'
-    $results = $cd + '\.results'
+    $bin     = Join-Path $cd '\.bin'
+    $results = Join-Path $cd '\.results'
 
     CreateDir('.bin')
     CreateDir('.results')
@@ -79,11 +79,11 @@ steps:
 
     $cfg = $dprName + '.cfg'
     $dpr = $dprName + '.dpr'
-    $exe = $bin + '\' + $dprName + '.exe'
+    $exe = Join-Path $bin $($dprName + '.exe')
 
-    $dr = 'c:\dcc\' + $dVer
-    $db = $dr + '\bin'
-    $dl = $dr + '\lib'
+    $dr = Join-Path 'c:\dcc' $dVer
+    $db = Join-Path $dr 'bin'
+    $dl = Join-Path $dr 'lib'
 
     # If an IDE FixPack compiler is found, use that instead.
 
