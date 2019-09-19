@@ -2,173 +2,157 @@ parameters:
   delphiVersion: ''
   project: ''
   appType: 'CONSOLE'    # CONSOLE (default) or GUI
-  platform: ''
+  platform: 'x86'
   searchPath: ''
   unitScopes: 'System;System.Win;Vcl;WinApi'
   fixPack: 'true'
   verbose: 'false'
   preBuild: []
-  preBuildInline: []
+  preBuildInline: ''
   postBuild: []
-  postBuildInline: []
+  postBuildInline: ''
 
 steps:
 - ${{ parameters.preBuild }}
 - powershell: |
-    $appType       = '${{ parameters.appType }}'
-    $delphiVersion = '${{ parameters.delphiVersion }}'
-    $project       = '${{ parameters.project }}'
-    $searchPath    = '${{ parameters.searchPath }}'
-    $unitScopes    = '${{ parameters.unitScopes }}'
-    $fixPack       = '${{ parameters.fixPack }}'
-    $verbose       = '${{ parameters.verbose }}'
+    function CreateDir
+    {
+      param([string]$path)
+      if (-Not(Test-Path $path)) { New-Item $path -ItemType directory | Out-Null }
+    }
+
+    function Delete
+    {
+      param([string]$item)
+      if (Test-Path $item) { Remove-Item $item | Out-Null }
+    }
+
+    $dVer        = '${{ parameters.delphiVersion }}'
+    $project     = '${{ parameters.project }}'
+    $appType     = '${{ parameters.appType }}'
+    $platform    = '${{ parameters.platform }}'
+    $uses        = '${{ parameters.searchPath }}'
+    $unitScopes  = '${{ parameters.unitScopes }}'
+    $fixPack     = '${{ parameters.fixPack }}'
+    $verbose     = '${{ parameters.verbose }}'
+
+    # Human meaningful into useful
 
     $bits = if($platform -eq 'x64') {'64'} else {'32'}
 
-    if ($delphiVersion -eq '7')        { $delphi = 150 }
-    elseif ($delphiVersion -eq '8')    { $delphi = 160 }
-    elseif ($delphiVersion -eq '2005') { $delphi = 170 }
-    elseif ($delphiVersion -eq '2006') { $delphi = 180 }
-    elseif ($delphiVersion -eq '2007') { $delphi = 185 }
-    elseif ($delphiVersion -eq '2009') { $delphi = 200 }
-    elseif ($delphiVersion -eq '2010') { $delphi = 210 }
-    elseif ($delphiVersion -eq 'xe')   { $delphi = 220 }
-    elseif ($delphiVersion -eq 'xe2')  { $delphi = 230 }
-    elseif ($delphiVersion -eq 'xe3')  { $delphi = 240 }
-    elseif ($delphiVersion -eq 'xe4')  { $delphi = 250 }
-    elseif ($delphiVersion -eq 'xe5')  { $delphi = 260 }
-    elseif ($delphiVersion -eq 'xe6')  { $delphi = 270 }
-    elseif ($delphiVersion -eq 'xe7')  { $delphi = 280 }
-    elseif ($delphiVersion -eq 'xe8')  { $delphi = 290 }
-    elseif ($delphiVersion -eq '10')   { $delphi = 300 }
-    elseif ($delphiVersion -eq '10.1') { $delphi = 310 }
-    elseif ($delphiVersion -eq '10.2') { $delphi = 320 }
-    elseif ($delphiVersion -eq '10.3') { $delphi = 330 }
-    else { Write-Host "##vso[task.logissue type=error]Unknown Delphi version '$(delphiVersion)' is not supported by this template" }
+    if     ($dVer -eq '7')    { $d = 150 }
+    elseif ($dVer -eq '8')    { $d = 160 }
+    elseif ($dVer -eq '2005') { $d = 170 }
+    elseif ($dVer -eq '2006') { $d = 180 }
+    elseif ($dVer -eq '2007') { $d = 185 }
+    elseif ($dVer -eq '2009') { $d = 200 }
+    elseif ($dVer -eq '2010') { $d = 210 }
+    elseif ($dVer -eq 'xe')   { $d = 220 }
+    elseif ($dVer -eq 'xe2')  { $d = 230 }
+    elseif ($dVer -eq 'xe3')  { $d = 240 }
+    elseif ($dVer -eq 'xe4')  { $d = 250 }
+    elseif ($dVer -eq 'xe5')  { $d = 260 }
+    elseif ($dVer -eq 'xe6')  { $d = 270 }
+    elseif ($dVer -eq 'xe7')  { $d = 280 }
+    elseif ($dVer -eq 'xe8')  { $d = 290 }
+    elseif ($dVer -eq '10')   { $d = 300 }
+    elseif ($dVer -eq '10.1') { $d = 310 }
+    elseif ($dVer -eq '10.2') { $d = 320 }
+    elseif ($dVer -eq '10.3') { $d = 330 }
+    else
+    {
+        Write-Host "##vso[task.logissue type=error]Delphi version '$(dVer)' is not supported"
+    }
+    $dXE = 220
 
-    # Some specific versions that are needed for comparisons later
-    
-    $delphiXE = 220
+    # Useful references
 
-    # Setup references to the dpr, exe, compiler cfg, libs etc
+    $cd  = Get-Location
+    $bin     = Join-Path $cd '\.bin'
+    $results = Join-Path $cd '\.results'
 
-    $dpr = $(Split-Path -Leaf $project) + '.dpr'
-    $exe = '.bin\' + $(Split-Path -Leaf $project) + '.exe'
+    CreateDir('.bin')
+    CreateDir('.results')
 
-    $delphiRoot = 'c:\dcc\' + $delphiVersion
-    $delphiBin  = $delphiRoot + '\bin'
-    $delphiLib  = $delphiRoot + '\lib'
+    $dprName = $(Split-Path -Leaf $project)
+    $dprPath = $(Split-Path -Path $project)
 
-    # Assume that we will use the standard Delphi compiler but then
-    #  check for the presence of an appropriate IDE FixPack compiler
-    #  (unless the fixPack parameter is anything other than 'true').
-    #
+    $cfg = $dprName + '.cfg'
+    $dpr = $dprName + '.dpr'
+    $exe = Join-Path $bin $($dprName + '.exe')
+
+    $dr = Join-Path 'c:\dcc' $dVer
+    $db = Join-Path $dr 'bin'
+    $dl = Join-Path $dr 'lib'
+
     # If an IDE FixPack compiler is found, use that instead.
 
-    $dcc = $delphiBin + '\dcc' + $bits + '.exe'
-    $cfg = 'dcc' + $bits + '.cfg'
+    $dcc = $db + '\dcc' + $bits + '.exe'
 
-    if($fixPack -eq 'true') {
+    if($fixPack -eq 'true')
+    {
         Write-Host 'Checking for IDE FixPack compilers'
 
-        $dccSpeed = $delphiBin + '\dcc' + $bits + 'speed.exe'
-        $fastDcc  = $delphiBin + '\fastdcc' + $bits + '.exe'
+        $dccSpeed = $db + '\dcc' + $bits + 'speed.exe'
+        $fastDcc  = $db + '\fastdcc' + $bits + '.exe'
 
-        if     (Test-Path -Path $dccSpeed) { $dcc = $dccSpeed }
-        elseif (Test-Path -Path $fastDcc)  { $dcc = $fastDcc }
+        if     (Test-Path $dccSpeed) { $dcc = $dccSpeed }
+        elseif (Test-Path $fastDcc)  { $dcc = $fastDcc }
     }
-    Write-Host $('Compiling with      : ' + $dcc)
 
-    # Modify the Delphi Lib path according to the specified Delphi version
-    #  and insert into the searchPath
+    # Setup lib and search path
 
-    if     ($delphi -eq $delphiXE) { $delphiLib = $delphiLib + '\win32\release' }
-    elseif ($delphi -gt $delphiXE) { $delphiLib = $delphiLib + '\win' + $bits + '\release' }
+    if     ($d -eq $dXE) { $dl = $dl + '\win32\release' }
+    elseif ($d -gt $dXE) { $dl = $dl + '\win' + $bits + '\release' }
 
-    $searchPath = $delphiLib + ';' + $searchPath
+    $uses = $dl + ';' + $uses
 
-    Write-Host $('Delphi library path : ' + $delphiLib)
-    Write-Host $('Using search path   : ' + $searchPath)
-    Write-Host $('To build            : ' + $exe)
+    Set-Location $dprPath
+    try
+    {
+        # Remove any previous build and config
+
+        Delete($exe)
+        Delete($cfg)
+        Delete($('dcc' + $bits + '.cfg'))
+
+        New-Item $cfg -ItemType file | Out-Null
+
+        Add-Content $cfg $('-D' + $appType)
+        Add-Content $cfg $('-E' + $bin)
+        Add-Content $cfg $('-I' + $uses)
+        Add-Content $cfg $('-N' + $bin)
+        Add-Content $cfg $('-R' + $uses)
+        Add-Content $cfg $('-U' + $uses)
+        if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
+
+        ${{ parameters.preBuildInline }}
+        Write-Host $('Config [' + $cfg + ']:')
+        type $cfg
+
+        # Invoke the compiler
+        $cmd = $dcc + ' ' + $dpr
+        if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
+
+        Write-Host $(':>[' + $cmd + ']')
+        if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
+        else { Invoke-Expression $cmd }
+    }
+    finally
+    {
+        Set-Location $cd
+    }
         
-    # Construct compiler options for the dccNN.cfg file then create that file
-
-    Set-Location (Split-Path -Path $project)
-
-    if (-Not(Test-Path -Path .bin))     { New-Item .bin     -ItemType directory | Out-Null }
-    if (-Not(Test-Path -Path .results)) { New-Item .results -ItemType directory | Out-Null }
-
-    $optD = '-D' + $appType
-    $optE = '-E.bin'
-    $optI = '-I' + $searchPath
-    $optN = '-N.bin'
-    $optR = '-R' + $searchPath
-    $optU = '-U' + $searchPath
-
-    if($delphi -gt $delphiXE) { $optNS='-NS' + $unitScopes }
-        
-    Write-Host $('Creating compiler configuration : ' + $cfg)
-
-    if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
-    New-Item $cfg -ItemType file | Out-Null
-
-    Add-Content $cfg $optD
-    Add-Content $cfg $optE
-    Add-Content $cfg $optI
-    Add-Content $cfg $optN
-    Add-Content $cfg $optR
-    Add-Content $cfg $optU
-    if ($delphi -gt $delphiXE) { Add-Content $cfg $optNS }
-
-    # Remove any previous build and invoke any preBuildInline script
-        
-    if (Test-Path -Path $exe) { Remove-Item $exe | Out-Null }
-
-    # NOTE: What follows is a temporary fix to accommodate the current
-    #        state of duget.
-    #
-    # We rename the dcc<bits>.cfg to <project>.cfg.  If a duget restore
-    #  is performed in the preBuildInline script, it will update <project>.cfg
-    #  which we then rename back to dcc<bits>.cfg.
-    #
-    # Yes, I need to figure out a proper way to handle this.
-
-    $temp = $(Split-Path -Leaf $project) + '.cfg'
-    
-    Write-Host $('Renaming ' + $cfg + ' as ' + $temp)
-    
-    Rename-Item $cfg $temp
-    
-    ${{ parameters.preBuildInline }}
-
-    Write-Host $('Renaming ' + $temp + ' back to ' + $cfg)
-
-    Rename-Item $temp $cfg
-
-    type $cfg
-
-    # Invoke the compiler to build the project
-
-    $cmd = $dcc + ' ' + $dpr
-    if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC'}
-
-    Write-Host $('Compiling with ' + $cmd)
-    if ($verbose -eq 'true') { Invoke-Expression $cmd }
-    else                     { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
-
-    # Clean-up: remove the cfg file (to ensure it doesn't interfere with future builds)
-
-    if (Test-Path -Path $cfg) { Remove-Item $cfg | Out-Null }
-    
-    # Report success or failure, as appropriate
-
-    if (Test-Path -Path $exe) {
-        Write-Host $('Build succeeded! :)  [' + $exe + ']')
-
+    # Report outcome
+    if (Test-Path $exe)
+    {
+        Write-Host 'OK!'
         ${{ parameters.postBuildInline }}
-    } else {
-        Write-Host "##vso[task.logissue type=error]Build failed.  :("
+    }
+    else
+    {
+        Write-Host '##vso[task.logissue type=error]Build failed. :('
         exit 1
     }
-  displayName: 'Delphi ${{ parameters.delphiVersion }} Build of ${{ parameters.project }}'
+  displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
