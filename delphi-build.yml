@@ -18,13 +18,13 @@ steps:
     function CreateDir
     {
       param([string]$path)
-      if (-Not(Test-Path -Path $path)) { New-Item $path -ItemType directory | Out-Null }
+      if (-Not(Test-Path $path)) { New-Item $path -ItemType directory | Out-Null }
     }
 
     function Delete
     {
       param([string]$item)
-      if (Test-Path -Path $item) { Remove-Item $item | Out-Null }
+      if (Test-Path $item) { Remove-Item $item | Out-Null }
     }
 
     $dVer        = '${{ parameters.delphiVersion }}'
@@ -96,8 +96,8 @@ steps:
         $dccSpeed = $db + '\dcc' + $bits + 'speed.exe'
         $fastDcc  = $db + '\fastdcc' + $bits + '.exe'
 
-        if     (Test-Path -Path $dccSpeed) { $dcc = $dccSpeed }
-        elseif (Test-Path -Path $fastDcc)  { $dcc = $fastDcc }
+        if     (Test-Path $dccSpeed) { $dcc = $dccSpeed }
+        elseif (Test-Path $fastDcc)  { $dcc = $fastDcc }
     }
 
     # Setup lib and search path
@@ -137,22 +137,22 @@ steps:
         Write-Host $(':>[' + $cmd + ']')
         if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
         else { Invoke-Expression $cmd }
-        
-        # Report outcome
-        if (Test-Path -Path $exe)
-        {
-            Write-Host 'OK!'
-            ${{ parameters.postBuildInline }}
-        }
-        else
-        {
-            Write-Host '##vso[task.logissue type=error]Build failed. :('
-            exit 1
-        }
     }
     finally
     {
         Set-Location $cd
+    }
+        
+    # Report outcome
+    if (Test-Path $exe)
+    {
+        Write-Host 'OK!'
+        ${{ parameters.postBuildInline }}
+    }
+    else
+    {
+        Write-Host '##vso[task.logissue type=error]Build failed. :('
+        exit 1
     }
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
