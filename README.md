@@ -78,13 +78,15 @@ An explanation of the benefits of these compilers as well as the compilers thems
 
 2. The main build step uses the specified Delphi version and platform to determine the compiler for use in the build and the required `lib` path to be added (as a minimum) to the search paths.  If required, IDE FixPack compilers are located and specified for use in preference over the standard compilers.
 
-3. The working directory is set to the folder containing the specified project, where subfolders are then created to hold compiler output (`.bin`) and test results (`.results`).  _The build step itself makes no use of the `.results` folder and its use in any consuming build pipeline is entirely optional_.
+3. Two folders are created in the initial working folder.  For simplicity you can think of this as the "root" of the repository from which you are building.  The two folders are for compiler output (`.bin`) and test results (`.results`).  _The build step itself makes no use of the `.results` folder and its use in any consuming build pipeline is entirely optional_.
 
-4. A compiler configuration file is created with settings for search paths (`-I`, `-R`, `-U`), application target (`-D` = `CONSOLE` or `GUI`) and output directories for exe and dcu files (`.bin`).
+4. The working directory is then set to the folder containing the specified project where a compiler configuration file is created for that project (`<project>.cfg`).  This is created with settings for search paths (`-I`, `-R`, `-U`), application target (`-D` = `CONSOLE` or `GUI`) and output directories for exe (`-E`) and dcu (`-N`) files.  These last two are both set to the `.bin` folder created at step 3.  _NOTE: The search path settings applied to `-I`, `-R` and `-U` are all set initially to only the `lib` folder applicable to the Delphi version involved_.
 
-5. After executing any `preBuildInline` statements the compiler is then invoked.  If the expected `exe` file is found in the `.bin` folder, the compilation is deemed successful, otherwise failure is reported.  If successful, any `postBuildInline` statements are executed.
+5. After executing any `preBuildInline` statements the compiler is then invoked.  _This is a good place to run `duget restore` as this will restore dependencies and update search paths in the `<project>.cfg` as required_.
 
-6. Finally, any `postBuild` steps are executed.  If no [step conditions](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/conditions?view=azure-devops&tabs=yaml) are specified on those to determine otherwise, `postBuild` steps are only executed if the main build step and any `preBuild` steps were successful.
+6. The working folder is reset to the 'root' of the repo and if the expected `exe` file is found in the `.bin` folder, the compilation is deemed successful and any `postBuildInline` statements are executed.  If the `exe` file is not found, failure is reported and the job status set to failed.
+
+7. Finally, any `postBuild` steps are executed.  If no [step conditions](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/conditions?view=azure-devops&tabs=yaml) are specified on those to determine otherwise, `postBuild` steps are only executed if the main build step and any `preBuild` steps were successful.
 
 
 ### Roadmap
