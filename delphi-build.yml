@@ -85,10 +85,16 @@ steps:
     $db = Join-Path $dr 'bin'
     $dl = Join-Path $dr 'lib'
 
+    if (-Not(Test-Path $db))
+    {
+        Write-Host "##vso[task.complete result=skipped]Delphi $dVer not on this machine."
+        exit
+    }
+
     # If an IDE FixPack compiler is found, use that instead.
 
     $dcc = $db + '\dcc' + $bits + '.exe'
-
+    
     if($fixPack -eq 'true')
     {
         Write-Host 'Checking for IDE FixPack compilers'
