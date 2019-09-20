@@ -72,7 +72,7 @@ steps:
     $dl = Join-Path $dr 'lib'
 
     if (-Not(Test-Path $db)) {
-        Write-Host "##vso[task.complete result=skipped]Delphi $dVer not available on this machine."
+        Write-Host "##vso[task.complete result=Skipped;]Delphi $dVer not available on this machine."
         exit }
 
     # If an IDE FixPack compiler is found, use that instead.
