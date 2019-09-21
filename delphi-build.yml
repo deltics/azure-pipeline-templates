@@ -107,15 +107,16 @@ steps:
 
         Add-Content $cfg $('-D' + $appType)
         Add-Content $cfg $('-E' + $bin)
-        Add-Content $cfg $('-I' + $uses)
         Add-Content $cfg $('-N' + $bin)
-        Add-Content $cfg $('-R' + $uses)
         Add-Content $cfg $('-U' + $uses)
         if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
 
         ${{ parameters.preBuildInline }}
+
         Write-Host $('Config [' + $cfg + ']:')
         type $cfg
+        
+        Copy-Item $cfg $("dcc$bits.cfg")
 
         # Invoke the compiler
         $cmd = $dcc + ' ' + $dpr
