@@ -26,6 +26,14 @@ steps:
     #  the tags in the repo.
     
     $GitVersion = GitVersion | ConvertFrom-Json
+
+    Write-Host "##vso[task.setvariable variable=gitversionmajor]$($GitVersion.Major)"
+    Write-Host "##vso[task.setvariable variable=gitversionminor]$($GitVersion.Minor)"
+    Write-Host "##vso[task.setvariable variable=gitversionpatch]$($GitVersion.Patch)"
+    Write-Host "##vso[task.setvariable variable=gitversionprelabel]$($GitVersion.PreReleaseLabel)"
+    Write-Host "##vso[task.setvariable variable=gitversionprenumber]$($GitVersion.PreReleaseNumber)"
+
     Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
+
     Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
   displayName: GitVersion
