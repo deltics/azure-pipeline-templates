@@ -39,30 +39,16 @@ steps:
     # Human meaningful into useful
 
     $bits = if($platform -eq 'x64') {'64'} else {'32'}
+    
+    $verMap = @{ '2'=90; '3'=100; '4'=120; '5'=130; '6'=140; '7'=150;
+                 '2005'=170; '2006'=180; '2007'=185; '2009'=200; '2010'=210;
+                 'xe'=220; 'xe2'=230; 'xe3'=240; 'xe4'=250; 'xe5'=260; 'xe6'=270; 'xe7'=280; 'xe8'=290;
+                 '10'=300; '10.1'=310; '10.2'=320; '10.3'=330 }
+                 
+    if ($verMap.ContainsKey($dVer)) { $d = $verMap[$dVer] }
+    else { Write-Host "##vso[task.logissue type=error]Delphi $(dVer) is not supported"
+           exit }
 
-    if     ($dVer -eq '7')    { $d = 150 }
-    elseif ($dVer -eq '8')    { $d = 160 }
-    elseif ($dVer -eq '2005') { $d = 170 }
-    elseif ($dVer -eq '2006') { $d = 180 }
-    elseif ($dVer -eq '2007') { $d = 185 }
-    elseif ($dVer -eq '2009') { $d = 200 }
-    elseif ($dVer -eq '2010') { $d = 210 }
-    elseif ($dVer -eq 'xe')   { $d = 220 }
-    elseif ($dVer -eq 'xe2')  { $d = 230 }
-    elseif ($dVer -eq 'xe3')  { $d = 240 }
-    elseif ($dVer -eq 'xe4')  { $d = 250 }
-    elseif ($dVer -eq 'xe5')  { $d = 260 }
-    elseif ($dVer -eq 'xe6')  { $d = 270 }
-    elseif ($dVer -eq 'xe7')  { $d = 280 }
-    elseif ($dVer -eq 'xe8')  { $d = 290 }
-    elseif ($dVer -eq '10')   { $d = 300 }
-    elseif ($dVer -eq '10.1') { $d = 310 }
-    elseif ($dVer -eq '10.2') { $d = 320 }
-    elseif ($dVer -eq '10.3') { $d = 330 }
-    else
-    {
-        Write-Host "##vso[task.logissue type=error]Delphi version '$(dVer)' is not supported"
-    }
     $dXE = 220
 
     # Useful references
@@ -85,20 +71,22 @@ steps:
     $db = Join-Path $dr 'bin'
     $dl = Join-Path $dr 'lib'
 
+    if (-Not(Test-Path $db)) {
+        Write-Host "##vso[task.complete result=Skipped;]Delphi $dVer not available on this machine."
+        exit }
+
     # If an IDE FixPack compiler is found, use that instead.
 
     $dcc = $db + '\dcc' + $bits + '.exe'
-
-    if($fixPack -eq 'true')
-    {
+    
+    if($fixPack -eq 'true') {
         Write-Host 'Checking for IDE FixPack compilers'
 
         $dccSpeed = $db + '\dcc' + $bits + 'speed.exe'
         $fastDcc  = $db + '\fastdcc' + $bits + '.exe'
 
         if     (Test-Path $dccSpeed) { $dcc = $dccSpeed }
-        elseif (Test-Path $fastDcc)  { $dcc = $fastDcc }
-    }
+        elseif (Test-Path $fastDcc)  { $dcc = $fastDcc } }
 
     # Setup lib and search path
 
@@ -108,8 +96,7 @@ steps:
     $uses = $dl + ';' + $uses
 
     Set-Location $dprPath
-    try
-    {
+    try {
         # Remove any previous build and config
 
         Delete($exe)
@@ -120,15 +107,16 @@ steps:
 
         Add-Content $cfg $('-D' + $appType)
         Add-Content $cfg $('-E' + $bin)
-        Add-Content $cfg $('-I' + $uses)
         Add-Content $cfg $('-N' + $bin)
-        Add-Content $cfg $('-R' + $uses)
         Add-Content $cfg $('-U' + $uses)
         if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
 
         ${{ parameters.preBuildInline }}
+
         Write-Host $('Config [' + $cfg + ']:')
         type $cfg
+        
+        Copy-Item $cfg $("dcc$bits.cfg")
 
         # Invoke the compiler
         $cmd = $dcc + ' ' + $dpr
@@ -136,23 +124,16 @@ steps:
 
         Write-Host $(':>[' + $cmd + ']')
         if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
-        else { Invoke-Expression $cmd }
-    }
-    finally
-    {
-        Set-Location $cd
-    }
+        else { Invoke-Expression $cmd } }
+    finally {
+        Set-Location $cd }
         
     # Report outcome
-    if (Test-Path $exe)
-    {
+    if (Test-Path $exe) {
         Write-Host 'OK!'
-        ${{ parameters.postBuildInline }}
-    }
-    else
-    {
-        Write-Host '##vso[task.logissue type=error]Build failed. :('
-        exit 1
-    }
+        ${{ parameters.postBuildInline }} }
+    else { Write-Host '##vso[task.logissue type=error]Build failed. :('
+           exit 1 }
+             
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
 - ${{ parameters.postBuild }}
