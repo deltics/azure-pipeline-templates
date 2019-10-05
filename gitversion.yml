@@ -27,13 +27,17 @@ steps:
     
     $GitVersion = GitVersion | ConvertFrom-Json
 
-    Write-Host "##vso[task.setvariable variable=gitversionmajor]$($GitVersion.Major)"
-    Write-Host "##vso[task.setvariable variable=gitversionminor]$($GitVersion.Minor)"
-    Write-Host "##vso[task.setvariable variable=gitversionpatch]$($GitVersion.Patch)"
-    Write-Host "##vso[task.setvariable variable=gitversionprelabel]$($GitVersion.PreReleaseLabel)"
-    Write-Host "##vso[task.setvariable variable=gitversionprenumber]$($GitVersion.PreReleaseNumber)"
+    # Set output variables.  To consume these in subsequent steps map the output
+    #  variables as job variables for those jobs 
 
-    Write-Host "##vso[task.setvariable variable=gitversion]$($GitVersion.SemVer)"
+    Write-Host "##vso[task.setvariable variable=Major;isOutput=true]$($GitVersion.Major)"
+    Write-Host "##vso[task.setvariable variable=Minor;isOutput=true]$($GitVersion.Minor)"
+    Write-Host "##vso[task.setvariable variable=Patch;isOutput=true]$($GitVersion.Patch)"
+    Write-Host "##vso[task.setvariable variable=PreReleaseLabel;isOutput=true]$($GitVersion.PreReleaseLabel)"
+    Write-Host "##vso[task.setvariable variable=PreReleaseNumber;isOutput=true]$($GitVersion.PreReleaseNumber)"
+
+    Write-Host "##vso[task.setvariable variable=SemVer;isOutput=true]$($GitVersion.SemVer)"
 
     Write-Host "##vso[build.updatebuildnumber]$($GitVersion.SemVer)"
+  name: GitVersion
   displayName: GitVersion
