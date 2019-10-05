@@ -15,7 +15,6 @@ parameters:
 
 steps:
 - ${{ parameters.preBuild }}
-  condition: ${{ parameters.condition }}
 - powershell: |
     function CreateDir
     {
@@ -159,4 +158,3 @@ steps:
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
   condition: ${{ parameters.condition }}
 - ${{ parameters.postBuild }}
-  condition: ${{ parameters.condition }}
