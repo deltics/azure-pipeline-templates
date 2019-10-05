@@ -11,9 +11,11 @@ parameters:
   preBuildInline: ''
   postBuild: []
   postBuildInline: ''
+  condition: succeededOrFailed()
 
 steps:
 - ${{ parameters.preBuild }}
+  condition: ${{ parameters.condition }}
 - powershell: |
     function CreateDir
     {
@@ -155,4 +157,6 @@ steps:
         exit 1
     }
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
+  condition: ${{ parameters.condition }}
 - ${{ parameters.postBuild }}
+  condition: ${{ parameters.condition }}
