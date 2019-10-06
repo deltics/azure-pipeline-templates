@@ -10,16 +10,14 @@ To use these templates in your Azure DevOps build pipeline, refer to the followi
 
 
 ## delphi-build.yml
-A Powershell script based template for building Delphi projects.  This template currently only supports **Win32** and **Win64** builds.  _It is untested with FMX projects_.
+A Powershell script based template for building Delphi projects.  This template currently only supports **Win32** and **Win64** builds of VCL projects.  _It is untested with FMX projects_ (so it may work, it just hadn't been tried).
 
 ### Pre-Requisites
 
 As well as the configuration required in your GitHub account and Azure DevOps project in order to be able to references this template, the following are also required.
 
 #### A Self-Hosted Azure DevOps Build Agent
-Delphi compilers are not supported by the hosted build agents provided by Microsoft for Azure DevOps builds.  You will need to configure your own, self-hosted build machine with an agent installed.
-
-This is really straightforward to accomplish and a guide (of sorts) to this is [available on my blog](http://www.deltics.co.nz/blog/posts/2659).
+Delphi compilers are not supported by the hosted build agents provided by Microsoft for Azure DevOps builds.  You will need to configure your own, self-hosted build machine with an agent installed.  This is really straightforward to accomplish and a guide (of sorts) to this is [available on my blog](http://www.deltics.co.nz/blog/posts/2659).
 
 #### Delphi Compilers
 A build agent running this build job is assumed to have Delphi command-line compiler support with available Delphi versions in locations on the build agent hard-drive as follows:
@@ -66,7 +64,7 @@ An explanation of the benefits of these compilers as well as the compilers thems
   |**platform**|Identifies the target platform for the build.  If specified it must have the value `x86` (for Win32 builds) or `x64` (for Win64).  If not specified `x86` is assumed.  Whatever value is specified is ignored for Delphi versions earlier than XE2 (only Win32 builds are supported up to Delphi XE).|
   |**searchPath**|An **optional** path to be added to `-I`, `-R` and `-U` search paths for the compiler.  That is, `include`, `resource` and `unit` search paths, respectively.|
   |**unitScopes**|An **optional** set of scope namespace prefixes for use with XE2 and later.  If not specified then `System;System.Win;Vcl;WinApi` is assumed.|
-  |**fixPack**|An **optional** parameter that determines whether the build will attempt to use the relevant IDE FixPack compiler for the Delphi version.  If any value other than `true` is specified then the standard Delphi compiler will be used.  If not specified then `true` is assumed.  Whether `true` is specified or assumed, FixPack compilers will only be used if present on the build maachine, otherwise the standard compiler will be used instead.|
+  |**fixPack**|An **optional** parameter that determines whether the build will attempt to use the relevant IDE FixPack compiler for the Delphi version.  If any value other than `true` is specified then the standard Delphi compiler will be used.  If not specified then `true` is assumed.  Whether `true` is specified or assumed, FixPack compilers will only be used if present on the build machine, otherwise the standard compiler will be used instead.|
   |**verbose**|An **optional** parameter that determines whether Delphi compiler output is complete or limited to only hints, warnings and errors.  For verbose output, specify `true`.  Any other value is equivalent to `false`.  If not specified then `false` is assumed.|
   |**preBuild: []**|An **optional** parameter that defines an additional step (or steps) to be performed _before_ the Delphi build step itself.  _If any specified preBuild step(s) fail then the Delphi build step will not be performed_.|
   |**preBuildInline: []**|An **optional** parameter that defines additional Powershell script statements to be performed by the build step immediately before executing the compiler.  _Errors occuring during execution of these script statements may cause the Delphi build step to fail even if the Delphi compilation is successful._|
@@ -84,7 +82,7 @@ An explanation of the benefits of these compilers as well as the compilers thems
 
 5. After executing any `preBuildInline` statements the compiler is then invoked.  _This is a good place to run `duget restore` as this will restore dependencies and update search paths in the `<project>.cfg` as required_.
 
-6. The working folder is reset to the 'root' of the repo and if the expected `exe` file is found in the `.bin` folder, the compilation is deemed successful and any `postBuildInline` statements are executed.  If the `exe` file is not found, failure is reported and the job status set to failed.
+6. The working folder is reset to the 'root' of the repo and if the expected `exe` file is found in the `.bin` folder, the compilation is deemed successful and any `postBuildInline` statements are executed.  If the `exe` file is not found, failure is reported and the job status set to failed.  Any resulting `exe` file in the `.bin` folder is moved to the `$(Build.BinariesDirectory)` (this is a location created and maintained by the Azure DevOps pipeline which can be referred to using that variable name in any pipeline).
 
 7. Finally, any `postBuild` steps are executed.  If no [step conditions](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/conditions?view=azure-devops&tabs=yaml) are specified on those to determine otherwise, `postBuild` steps are only executed if the main build step and any `preBuild` steps were successful.
 
@@ -96,4 +94,5 @@ _**NOTE:** There is no timeline in mind for any of these features.  Development 
 2. Validation of support for FMX builds.
 3. Support for platforms other than Windows.
 4. For building with MS Build (as an alternative to reliance on compiler configuration files).
-5. Built-in support for **duget** steps.
+5. Built-in support for **duget** steps ?
+6. Ultimately, replacement of this template with a packaged Task, distributed thru the Visual Studio Marketplace.
