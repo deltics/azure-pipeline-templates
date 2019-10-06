@@ -6,7 +6,6 @@ parameters:
   searchPath: ''
   unitScopes: 'System;System.Win;Vcl;WinApi'
   fixPack: 'true'
-  verbose: 'false'
   preBuild: []
   preBuildInline: ''
   postBuild: []
@@ -120,17 +119,25 @@ steps:
 
         # Invoke the compiler
         $cmd = $dcc + ' ' + $dpr
+        $out = 'dccoutput.txt'
         if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
 
         Write-Host $(':>[' + $cmd + ']')
-        if ($verbose -ne 'true') { Invoke-Expression $cmd | Select-String -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' }
-        else { Invoke-Expression $cmd } }
-    finally {
-        Set-Location $cd }
+        Invoke-Expression $cmd | Select-String -SimpleMatch -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' > $out
+
+        $hintsOrWarnings = $(Get-Item $out).length > 0
+        if ($hintsOrWarnings) { Write-Host 'Finished with hints/warnings:'; type $out } else { Write-Host 'Done' }
+        Delete($out)
+    }
+    finally { Set-Location $cd }
         
     # Report outcome
     if (Test-Path $exe) {
-        Write-Host 'OK!'
+        Move-Item $exe "$(Build.BinariesDirectory)"
+
+        if ( $hintsOrWarnings ) { Write-Host '##vso[task.logissue type=warning]Build completed with hints/warnings. :/' }
+        else { Write-Host '##vso[task.complete result=Succeeded;]Build completed OK. :)' }
+        
         ${{ parameters.postBuildInline }} }
     else { Write-Host '##vso[task.logissue type=error]Build failed. :('
            exit 1 }
