@@ -119,14 +119,15 @@ steps:
 
         # Invoke the compiler
         $cmd = $dcc + ' ' + $dpr
-        $out = 'dcc.out'
         if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
 
+        $out = 'dcc.out'
         if (Test-Path $out) { Delete($out) }
         Write-Host $(':>[' + $cmd + ']')
 
         Invoke-Expression $cmd | Select-String -SimpleMatch -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' | Out-File $out -NoNewLine
         $hintsOrWarnings = $(Get-Item $out).length > 0
+        type $out
     }
     finally { Set-Location $cd }
         
@@ -134,17 +135,13 @@ steps:
     if (Test-Path $exe) {
         Move-Item $exe "$(Build.BinariesDirectory)"
 
-        if ( $hintsOrWarnings ) {
-          Write-Host '##vso[task.logissue type=warning]Build completed with hints/warnings. :/'
-          type $out
-        }
+        if ( $hintsOrWarnings ) { Write-Host '##vso[task.logissue type=warning]Build completed with hints/warnings. :/' }
         else { Write-Host '##vso[task.complete result=Succeeded;]Build OK  :)' }
         
         ${{ parameters.postBuildInline }} }
     else {
-      Write-Host '##vso[task.logissue type=error]Build FAILED  :('
-      type $out
-      exit 1
+        Write-Host '##vso[task.logissue type=error]Build FAILED  :('
+        exit 1
     }
              
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
