@@ -1,11 +1,12 @@
 parameters:
   delphiVersion: ''
   project: ''
-  appType: 'CONSOLE'    # CONSOLE (default) or GUI
+  appType: 'CONSOLE'        # CONSOLE (default) or GUI
   platform: 'x86'
   searchPath: ''
   unitScopes: 'System;System.Win;Vcl;WinApi'
   fixPack: 'true'
+  continueOnError: false
   preBuild: []
   preBuildInline: ''
   postBuild: []
@@ -13,6 +14,7 @@ parameters:
 
 steps:
 - ${{ parameters.preBuild }}
+
 - powershell: |
     function CreateDir
     {
@@ -53,30 +55,28 @@ steps:
     # Useful references
 
     $cd  = Get-Location
-    $bin     = Join-Path $cd '\.bin'
-    $results = Join-Path $cd '\.results'
-
-    CreateDir('.bin')
-    CreateDir('.results')
-
+    $bin = "$(Build.BinariesDirectory)"
+    
     $dprName = $(Split-Path -Leaf $project)
     $dprPath = $(Split-Path -Path $project)
 
-    $cfg = $dprName + '.cfg'
-    $dpr = $dprName + '.dpr'
-    $exe = Join-Path $bin $($dprName + '.exe')
+    $cfg = "$dprName.cfg"
+    $dpr = "$dprName.dpr"
+    $exe = Join-Path $bin "$dprName.exe"
 
     $dr = Join-Path 'c:\dcc' $dVer
     $db = Join-Path $dr 'bin'
     $dl = Join-Path $dr 'lib'
 
     if (-Not(Test-Path $db)) {
-        Write-Host "##vso[task.complete result=Skipped;]Delphi $dVer not available on this machine."
+        $msg = "Delphi $dVer not available on this machine"
+        Write-Host "##vso[task.complete result=Skipped;]$msg"
+        Write-Host $msg
         exit }
 
     # If an IDE FixPack compiler is found, use that instead.
 
-    $dcc = $db + '\dcc' + $bits + '.exe'
+    $dcc = $db + "\dcc$bits.exe"
     
     if($fixPack -eq 'true') {
         Write-Host 'Checking for IDE FixPack compilers'
@@ -90,59 +90,63 @@ steps:
     # Setup lib and search path
 
     if     ($d -eq $dXE) { $dl = $dl + '\win32\release' }
-    elseif ($d -gt $dXE) { $dl = $dl + '\win' + $bits + '\release' }
+    elseif ($d -gt $dXE) { $dl = $dl + "\win$bits\release" }
 
-    $uses = $dl + ';' + $uses
+    $uses = "$dl;$uses"
 
     Set-Location $dprPath
-    try {
-        # Remove any previous build and config
 
-        Delete($exe)
-        Delete($cfg)
-        Delete($('dcc' + $bits + '.cfg'))
+    # Remove any previous build and config
 
-        New-Item $cfg -ItemType file | Out-Null
+    Delete($cfg)
+    Delete("dcc$bits.cfg")
 
-        Add-Content $cfg $('-D' + $appType)
-        Add-Content $cfg $('-E' + $bin)
-        Add-Content $cfg $('-N' + $bin)
-        Add-Content $cfg $('-U' + $uses)
-        if ($d -gt $dXE) { Add-Content $cfg $('-NS' + $unitScopes) }
+    New-Item $cfg -ItemType file | Out-Null
 
-        ${{ parameters.preBuildInline }}
+    Add-Content $cfg "-D$appType;_CICD"
+    Add-Content $cfg "-E$bin"
+    Add-Content $cfg "-N$bin"
+    Add-Content $cfg "-U$uses"
+    Add-Content $cfg "-$C+"
+    if ($d -gt $dXE) { Add-Content $cfg "-NS$unitScopes" }
 
-        Write-Host $('Config [' + $cfg + ']:')
-        type $cfg
-        
-        Copy-Item $cfg $("dcc$bits.cfg")
+    ${{ parameters.preBuildInline }}
 
-        # Invoke the compiler
-        $cmd = $dcc + ' ' + $dpr
-        if ($appType -eq 'CONSOLE') { $cmd = $cmd + ' -CC' }
+    Write-Host "Config [$cfg]:"
+    type $cfg
+    
+    Copy-Item $cfg $("dcc$bits.cfg")
 
-        $out = 'dcc.out'
-        if (Test-Path $out) { Delete($out) }
-        Write-Host $(':>[' + $cmd + ']')
+    # Invoke the compiler
+    $cmd = "$dcc $dpr"
+    if ($appType -eq 'CONSOLE') { $cmd += ' -CC' }
 
-        Invoke-Expression $cmd | Select-String -SimpleMatch -Pattern 'Fatal: ','Error: ','Hint: ','Warning: ' | Out-File $out -NoNewLine
-        $hintsOrWarnings = $(Get-Item $out).length > 0
-        type $out
-    }
-    finally { Set-Location $cd }
-        
+    $cmd += " | Select-String -SimpleMatch -Pattern 'Fatal: ','Error: ','Hint: ','Warning: '"
+    Write-Host ":>[$cmd]"
+    Invoke-Expression $cmd | Tee-Object -Variable out
+
+    Set-Location $cd
+
     # Report outcome
     if (Test-Path $exe) {
-        Move-Item $exe "$(Build.BinariesDirectory)"
+        if ( $out.length -gt 0 ) {
+            $msg = 'Build completed with hints/warnings. :/'
+            $result = 'SucceededWithIssues'
+            Write-Host "##vso[task.logissue type=warning]$msg"
+        }
+        else {
+            $msg = 'Build completed OK. :)'
+            $result = 'Succeeded'
+        }
+        Write-Host "##vso[task.complete result=$result;]$msg"
+        Write-Host $msg
 
-        if ( $hintsOrWarnings ) { Write-Host '##vso[task.logissue type=warning]Build completed with hints/warnings. :/' }
-        else { Write-Host '##vso[task.complete result=Succeeded;]Build OK  :)' }
-        
         ${{ parameters.postBuildInline }} }
     else {
-        Write-Host '##vso[task.logissue type=error]Build FAILED  :('
+        Write-Host "##vso[task.logissue type=error]Build failed. :("
         exit 1
     }
              
   displayName: 'Delphi ${{ parameters.delphiVersion }} build (${{ parameters.platform }}) of ${{ parameters.project }}'
+
 - ${{ parameters.postBuild }}
